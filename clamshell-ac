@@ -1,0 +1,20 @@
+#!/bin/sh
+# Lid closed on AC: keep running. On battery: sleep as normal.
+# Runs as root from /Library/LaunchDaemons/com.ssyphon.clamshell-ac.plist.
+cur=
+apply() {
+  if pmset -g batt | head -1 | grep -q "AC Power"; then want=1; else want=0; fi
+  [ "$want" = "$cur" ] && return
+  pmset -a disablesleep "$want" && cur=$want
+  logger -t clamshell-ac "disablesleep $want"
+  # unplugged with the lid already shut: sleep now rather than run hot in a bag
+  if [ "$want" = 0 ] && ioreg -r -k AppleClamshellState -d 1 | grep -q '"AppleClamshellState" = Yes'; then
+    logger -t clamshell-ac "lid closed on battery, sleeping"
+    pmset sleepnow
+  fi
+}
+apply
+# pslog prints "Now drawing from '...'" on every power-source change
+pmset -g pslog | while read -r line; do
+  case "$line" in *"Now drawing from"*) apply ;; esac
+done
