@@ -65,7 +65,7 @@ static float saved(void) {
 
 static void fade_in(float to) {
     CGDirectDisplayID d = CGMainDisplayID();
-    usleep(200000);                                   // a beat at the dim level macOS wakes the panel at
+    usleep(400000);                                   // a beat at the dim level macOS wakes the panel at
     float from = 0;
     DisplayServicesGetBrightness(d, &from);           // fade up from there: never dip (a dip reads as flicker)
     if (from > to) from = to;
