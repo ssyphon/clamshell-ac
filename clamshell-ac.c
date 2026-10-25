@@ -58,6 +58,8 @@ static void power_changed(void *ctx) {
     if (!ac && lid_shut()) { syslog(LOG_NOTICE, "lid shut on battery, sleeping"); run("sleepnow", NULL, NULL); }
 }
 
+static float ramp(double t);
+
 static float saved(void) {
     float b = -1; FILE *f = fopen(saved_path, "r");
     if (f) { if (fscanf(f, "%f", &b) != 1) b = -1; fclose(f); }
@@ -101,7 +103,9 @@ static void lid_changed(void *ctx, io_service_t s, natural_t msg, void *arg) {
         if (saved() < 0 && DisplayServicesGetBrightness(d, &b) == 0) {
             FILE *f = fopen(saved_path, "w"); if (f) { fprintf(f, "%f\n", b); fclose(f); }
         }
-        DisplayServicesSetBrightness(d, 0);           // wakes dark when the lid opens
+        // Park it at the ramp's first level: the panel is off, and macOS wakes it there and re-applies its stored
+        // brightness ~0.2s and ~0.4s later; parked at 0 that pulled the screen down mid-ramp (a dip, read as flicker).
+        DisplayServicesSetBrightness(d, saved() * ramp(0));
         run("displaysleepnow", NULL, NULL);
     } else {
         float b = saved();
