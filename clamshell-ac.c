@@ -17,6 +17,7 @@
 #include <string.h>
 #include <math.h>
 #include <unistd.h>
+#include <time.h>
 
 #define kIOPMMessageClamshellStateChange iokit_family_msg(sub_iokit_powermanagement, 0x100)
 extern char **environ;
@@ -63,17 +64,30 @@ static float saved(void) {
     return b;
 }
 
+static double now(void) {
+    struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return ts.tv_sec + ts.tv_nsec / 1e9;
+}
+
+// Lid open, 1.6s in all, timed by the clock: straight to 10% of the old brightness, hold a beat (0.35s), climb to 80%
+// (1.05s), then a quicker climb to 100% (0.2s). Never below what macOS woke the panel at, so it never dips.
+static float ramp(double t) {
+    if (t < 0.35) return 0.10f;
+    if (t < 1.40) return 0.10f + 0.70f * (t - 0.35) / 1.05;
+    if (t < 1.60) return 0.80f + 0.20f * (t - 1.40) / 0.20;
+    return 1;
+}
+
 static void fade_in(float to) {
     CGDirectDisplayID d = CGMainDisplayID();
-    usleep(400000);                                   // a beat at the dim level macOS wakes the panel at
-    float from = 0;
-    DisplayServicesGetBrightness(d, &from);           // fade up from there: never dip (a dip reads as flicker)
-    if (from > to) from = to;
-    for (int i = 1; i <= 20; i++) {                   // ease-out; macOS smooths each step, ~1s in all
-        float t = i / 20.0f;
-        DisplayServicesSetBrightness(d, from + (to - from) * (1 - powf(1 - t, 3)));
-        usleep(15000);
+    float woke = 0;
+    DisplayServicesGetBrightness(d, &woke);
+    double start = now();
+    for (double t = 0; t < 1.6; t = now() - start) {
+        float b = to * ramp(t);
+        DisplayServicesSetBrightness(d, b > woke ? b : woke);
+        usleep(10000);
     }
+    DisplayServicesSetBrightness(d, to);
     unlink(saved_path);
 }
 
