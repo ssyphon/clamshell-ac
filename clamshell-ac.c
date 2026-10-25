@@ -68,11 +68,12 @@ static double now(void) {
     struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return ts.tv_sec + ts.tv_nsec / 1e9;
 }
 
-// Lid open, 1.05s in all, timed by the clock: straight to 10% of the old brightness and hold to 0.35s, climb to 80% by
+// Lid open, 1.05s in all, timed by the clock: straight to 30% of the old brightness (lower shows the panel's
+// unevenness while the lid flexes) and hold to 0.35s, climb to 80% by
 // 0.85s, then to 100% by 1.05s. Never below what macOS woke the panel at, so it never dips.
 static float ramp(double t) {
-    if (t < 0.35) return 0.10f;
-    if (t < 0.85) return 0.10f + 0.70f * (t - 0.35) / 0.5;
+    if (t < 0.35) return 0.30f;
+    if (t < 0.85) return 0.30f + 0.50f * (t - 0.35) / 0.5;
     if (t < 1.05) return 0.80f + 0.20f * (t - 0.85) / 0.2;
     return 1;
 }
