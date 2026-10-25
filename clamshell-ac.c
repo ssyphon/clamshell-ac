@@ -68,12 +68,12 @@ static double now(void) {
     struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return ts.tv_sec + ts.tv_nsec / 1e9;
 }
 
-// Lid open, 1.2s in all, timed by the clock: straight to 10% of the old brightness and hold to 0.5s, climb to 80% by
-// 1.0s, then to 100% by 1.2s. Never below what macOS woke the panel at, so it never dips.
+// Lid open, 1.05s in all, timed by the clock: straight to 10% of the old brightness and hold to 0.35s, climb to 80% by
+// 0.85s, then to 100% by 1.05s. Never below what macOS woke the panel at, so it never dips.
 static float ramp(double t) {
-    if (t < 0.5) return 0.10f;
-    if (t < 1.0) return 0.10f + 0.70f * (t - 0.5) / 0.5;
-    if (t < 1.2) return 0.80f + 0.20f * (t - 1.0) / 0.2;
+    if (t < 0.35) return 0.10f;
+    if (t < 0.85) return 0.10f + 0.70f * (t - 0.35) / 0.5;
+    if (t < 1.05) return 0.80f + 0.20f * (t - 0.85) / 0.2;
     return 1;
 }
 
@@ -82,7 +82,7 @@ static void fade_in(float to) {
     float woke = 0;
     DisplayServicesGetBrightness(d, &woke);
     double start = now();
-    for (double t = 0; t < 1.2; t = now() - start) {
+    for (double t = 0; t < 1.05; t = now() - start) {
         float b = to * ramp(t);
         DisplayServicesSetBrightness(d, b > woke ? b : woke);
         usleep(10000);
