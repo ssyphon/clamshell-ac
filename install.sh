@@ -12,7 +12,8 @@ if [ "$1" = uninstall ]; then
 fi
 # root runs these, so root owns them (a user-writable script here would be a root backdoor)
 install -d -o root -g wheel /usr/local/libexec
-install -o root -g wheel -m 755 clamshell-ac /usr/local/libexec/clamshell-ac
+cc -O2 -o /tmp/clamshell-ac clamshell-ac.c -framework IOKit -framework CoreFoundation
+install -o root -g wheel -m 755 /tmp/clamshell-ac /usr/local/libexec/clamshell-ac && rm /tmp/clamshell-ac
 install -o root -g wheel -m 644 com.ssyphon.clamshell-ac.plist "$P"
 launchctl bootstrap system "$P"
 sleep 1; pmset -g | grep -i sleepdisabled || pmset -g | head -3
