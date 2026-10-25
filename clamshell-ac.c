@@ -65,11 +65,14 @@ static float saved(void) {
 
 static void fade_in(float to) {
     CGDirectDisplayID d = CGMainDisplayID();
-    usleep(400000);                                   // a beat of dark after the lid opens
-    for (int i = 1; i <= 40; i++) {                   // 0.8s ease-out to the old brightness
-        float t = i / 40.0f;
-        DisplayServicesSetBrightness(d, to * (1 - powf(1 - t, 3)));
-        usleep(20000);
+    usleep(200000);                                   // a beat at the dim level macOS wakes the panel at
+    float from = 0;
+    DisplayServicesGetBrightness(d, &from);           // fade up from there: never dip (a dip reads as flicker)
+    if (from > to) from = to;
+    for (int i = 1; i <= 20; i++) {                   // ease-out; macOS smooths each step, ~1s in all
+        float t = i / 20.0f;
+        DisplayServicesSetBrightness(d, from + (to - from) * (1 - powf(1 - t, 3)));
+        usleep(15000);
     }
     unlink(saved_path);
 }
